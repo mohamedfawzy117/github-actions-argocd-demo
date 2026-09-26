@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: web
-          image: mohamedfawzy1/github-argocd-demo:ef382f0fcc32a9176512154e3e89b2101ef2ccb7
+          image: mohamedfawzy1/github-argocd-demo:46f49ac2a4f8c4f0ba67946059a712c5ddb803aa
 
           ports:
             - containerPort: 80
