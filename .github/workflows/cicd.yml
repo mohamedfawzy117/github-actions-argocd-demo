@@ -10,15 +10,16 @@ permissions:
 
 jobs:
   build-and-push:
+    runs-on: ubuntu-24.04
 
-    runs-on: ubuntu 26
+    env:
+      IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/github-argocd-demo:${{ github.sha }}
 
     steps:
-
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
-      - name: Login to Docker Hub
+      - name: Log in to Docker Hub
         uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -27,17 +28,18 @@ jobs:
       - name: Build Docker image
         run: |
           docker build \
-            -t ${{ secrets.DOCKERHUB_USERNAME }}/github-argocd-demo:${{ github.sha }} \
+            -t "$IMAGE_NAME" \
             ./app
 
       - name: Push Docker image
         run: |
-          docker push \
-            ${{ secrets.DOCKERHUB_USERNAME }}/github-argocd-demo:${{ github.sha }}
+          docker push "$IMAGE_NAME"
 
       - name: Update Kubernetes manifest
         run: |
-          sed -i "s|image: .*|image: ${{ secrets.DOCKERHUB_USERNAME }}/github-argocd-demo:${{ github.sha }}|" k8s/deployment.yaml
+          sed -i -E \
+            "s|^([[:space:]]*image:[[:space:]]*).*$|\1${IMAGE_NAME}|" \
+            k8s/deployment.yaml
 
       - name: Commit Kubernetes manifest
         run: |
@@ -46,6 +48,9 @@ jobs:
 
           git add k8s/deployment.yaml
 
-          git diff --cached --quiet || git commit -m "Update image to ${{ github.sha }}"
-
-          git push
+          if git diff --cached --quiet; then
+            echo "No manifest changes to commit."
+          else
+            git commit -m "Update image to ${{ github.sha }}"
+            git push origin HEAD:main
+          fi
